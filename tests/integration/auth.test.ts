@@ -51,6 +51,45 @@ describe("authentication routes", () => {
     ).toContain("__peopleops_session");
   });
 
+  it("extends the session cookie when remember me is checked", async () => {
+    const result = await loginAction({
+      request: formRequest("http://localhost/login", {
+        email: "admin@test.local",
+        password: TEST_PASSWORD,
+        redirectTo: "/",
+        remember: "on",
+      }),
+      context: createContext(),
+      params: {},
+    } as never);
+
+    const unwrapped = await unwrap(result);
+
+    expect(unwrapped.status).toBe(302);
+    expect(
+      unwrapped.headers.get("Set-Cookie"),
+    ).toContain("Max-Age=2592000");
+  });
+
+  it("keeps the default session duration without remember me", async () => {
+    const result = await loginAction({
+      request: formRequest("http://localhost/login", {
+        email: "admin@test.local",
+        password: TEST_PASSWORD,
+        redirectTo: "/",
+      }),
+      context: createContext(),
+      params: {},
+    } as never);
+
+    const unwrapped = await unwrap(result);
+
+    expect(unwrapped.status).toBe(302);
+    expect(
+      unwrapped.headers.get("Set-Cookie"),
+    ).toContain("Max-Age=28800");
+  });
+
   it("rejects invalid password", async () => {
     const result = await loginAction({
       request: formRequest("http://localhost/login", {

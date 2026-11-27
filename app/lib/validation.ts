@@ -1,6 +1,10 @@
 import { z, type ZodError } from "zod";
 
-import { EMPLOYEE_STATUSES, ASSIGNMENT_STATUSES } from "./constants";
+import {
+  ASSIGNMENT_STATUSES,
+  EMPLOYEE_STATUSES,
+  USER_ROLES,
+} from "./constants";
 
 export const loginSchema = z.object({
   email: z
@@ -11,6 +15,42 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password wajib diisi"),
   redirectTo: z.string().optional().default("/"),
 });
+
+export const userCreateSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Nama minimal 2 karakter.")
+    .max(120, "Nama maksimal 120 karakter."),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email("Format email tidak valid."),
+  password: z
+    .string()
+    .min(8, "Kata sandi minimal 8 karakter.")
+    .max(72, "Kata sandi maksimal 72 karakter."),
+  role: z.enum([...USER_ROLES]),
+});
+
+export type UserCreateInput = z.infer<
+  typeof userCreateSchema
+>;
+
+export const userCreateFormSchema = userCreateSchema
+  .extend({
+    confirmPassword: z
+      .string()
+      .min(1, "Konfirmasi kata sandi wajib diisi."),
+  })
+  .refine(
+    (data) => data.password === data.confirmPassword,
+    {
+      path: ["confirmPassword"],
+      message: "Konfirmasi kata sandi tidak sama.",
+    },
+  );
 
 export const employeeInputSchema = z.object({
   name: z
@@ -34,13 +74,13 @@ export const employeeInputSchema = z.object({
   departmentId: z
     .string()
     .trim()
-    .min(1, "Department wajib dipilih.")
+    .min(1, "Departemen wajib dipilih.")
     .transform((value) => Number(value))
     .pipe(
       z
         .number()
-        .int("Department tidak valid.")
-        .positive("Department wajib dipilih."),
+        .int("Departemen tidak valid.")
+        .positive("Departemen wajib dipilih."),
     ),
 
   salary: z
@@ -106,12 +146,12 @@ export const assignmentCreateSchema = z.object({
   departmentId: z.coerce
     .number()
     .int()
-    .positive("Department wajib dipilih."),
+    .positive("Departemen wajib dipilih."),
 
   employeeId: z.coerce
     .number()
     .int()
-    .positive("Employee wajib dipilih."),
+    .positive("Karyawan wajib dipilih."),
 
   status: z
     .enum([...ASSIGNMENT_STATUSES])

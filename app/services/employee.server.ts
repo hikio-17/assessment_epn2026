@@ -72,9 +72,9 @@ function mapEmployeeDbError(
 
     if (isForeignKeyViolation(error)) {
         return new ValidationError(
-            "Department tidak ditemukan.",
+            "Departemen tidak ditemukan.",
             {
-                departmentId: "Department tidak ditemukan.",
+                departmentId: "Departemen tidak ditemukan.",
             },
         );
     }
@@ -138,7 +138,7 @@ export async function createEmployee(
 
             if (!loaded) {
                 throw new AppError(
-                    "Gagal memuat employee setelah disimpan.",
+                    "Gagal memuat karyawan setelah disimpan.",
                     500,
                 );
             }
@@ -173,7 +173,7 @@ export async function updateEmployee(
 
                 if (!employee) {
                     throw new NotFoundError(
-                        "Employee tidak ditemukan.",
+                        "Karyawan tidak ditemukan.",
                     );
                 }
 
@@ -208,7 +208,7 @@ export async function updateEmployee(
 
                 if (!loaded) {
                     throw new AppError(
-                        "Gagal memuat employee setelah diperbarui.",
+                        "Gagal memuat karyawan setelah diperbarui.",
                         500,
                     );
                 }
@@ -254,7 +254,7 @@ export async function deleteEmployee(
 
             if (!employee) {
                 throw new NotFoundError(
-                    "Employee tidak ditemukan.",
+                    "Karyawan tidak ditemukan.",
                 );
             }
 
@@ -283,7 +283,7 @@ export async function getEmployeeById(
         });
 
     if (!employee) {
-        throw new NotFoundError("Employee tidak ditemukan.");
+        throw new NotFoundError("Karyawan tidak ditemukan.");
     }
 
     return toEmployeeDTO(employee);

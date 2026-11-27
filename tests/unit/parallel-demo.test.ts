@@ -5,73 +5,150 @@ import {
   type ParallelApiSpec,
 } from "~/lib/parallel-demo.server";
 
+type TestSource = ParallelApiSpec & {
+  count: number;
+};
+
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => {
     setTimeout(resolve, ms);
   });
 
-function specs(): ParallelApiSpec[] {
-  return ["posts", "comments", "albums", "photos", "todos"].map(
-    (key, index) => ({
-      key,
-      label: key,
-      url: `https://example.test/${key}`,
-      delayMs: 0,
-      sampleField: "title",
-    }),
-  );
-}
+const sources: TestSource[] = [
+  {
+    key: "employees",
+    label: "Employees",
+    url: "https://example.test/employees",
+    delayMs: 120,
+    count: 12,
+  },
+  {
+    key: "departments",
+    label: "Departments",
+    url: "https://example.test/departments",
+    delayMs: 180,
+    count: 7,
+  },
+  {
+    key: "payroll",
+    label: "Payroll",
+    url: "https://example.test/payroll",
+    delayMs: 90,
+    count: 20,
+  },
+  {
+    key: "attendance",
+    label: "Attendance",
+    url: "https://example.test/attendance",
+    delayMs: 240,
+    count: 5,
+  },
+  {
+    key: "reports",
+    label: "Reports",
+    url: "https://example.test/reports",
+    delayMs: 60,
+    count: 9,
+  },
+];
 
-function payload() {
-  return Array.from({ length: 100 }, (_, index) => ({
+function payload(size: number) {
+  return Array.from({ length: size }, (_, index) => ({
     id: index,
     title: `Item ${index}`,
   }));
 }
 
-describe("parallel demo", () => {
-  it("loads five APIs concurrently", async () => {
-    const delays = [50, 60, 40, 80, 20];
+function createFetcher() {
+  return async (url: string) => {
+    const source = sources.find(
+      (item) => item.url === url,
+    );
 
-    const result = await runParallelDemo({
-      specs: specs(),
+    if (!source) {
+      throw new Error(`Unexpected URL: ${url}`);
+    }
+
+    await sleep(source.delayMs);
+
+    return Response.json(
+      payload(source.count),
+    );
+  };
+}
+
+describe("concurrent request runner", () => {
+  it("starts every request before the first response resolves", async () => {
+    let started = 0;
+    let release!: () => void;
+
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const pending = runParallelDemo({
+      specs: sources,
       sleep: async () => undefined,
-      fetcher: async (url) => {
-        const index = specs().findIndex(
-          (spec) => spec.url === url,
-        );
-        await sleep(delays[index]);
-        return Response.json(payload());
+      fetcher: async () => {
+        started += 1;
+
+        if (started === sources.length) {
+          release();
+        }
+
+        await gate;
+        return Response.json(payload(1));
       },
     });
 
-    expect(result.results).toHaveLength(5);
-    expect(result.totalRecords).toBe(500);
+    const result = await pending;
+
+    expect(started).toBe(sources.length);
+    expect(result.results).toHaveLength(sources.length);
+  });
+
+  it("keeps result order when responses finish out of order", async () => {
+    const result = await runParallelDemo({
+      specs: sources,
+      sleep: async () => undefined,
+      fetcher: createFetcher(),
+    });
+
+    expect(result.results.map((item) => item.key)).toEqual(
+      sources.map((item) => item.key),
+    );
+    expect(result.totalRecords).toBe(53);
+    expect(result.configuredSequentialMs).toBe(690);
+    expect(result.configuredParallelMs).toBe(240);
     expect(result.totalDurationMs).toBeLessThan(
       result.sequentialDurationMs,
+    );
+    expect(result.totalDurationMs).toBeLessThan(
+      result.configuredSequentialMs,
     );
     expect(result.savedMs).toBeGreaterThan(0);
   });
 
-  it("keeps other results when one API fails", async () => {
+  it("keeps successful results when one source fails", async () => {
     const result = await runParallelDemo({
-      specs: specs(),
+      specs: sources,
       sleep: async () => undefined,
       fetcher: async (url) => {
-        if (url.endsWith("/photos")) {
+        if (url.endsWith("/attendance")) {
           throw new Error("network");
         }
 
-        return Response.json(payload());
+        return createFetcher()(url);
       },
     });
 
     const failed = result.results.find(
-      (item) => item.key === "photos",
+      (item) => item.key === "attendance",
     );
 
+    expect(result.results).toHaveLength(sources.length);
     expect(failed?.ok).toBe(false);
     expect(failed?.error).toContain("network");
-    expect(result.totalRecords).toBe(400);
+    expect(result.totalRecords).toBe(48);
   });
 });

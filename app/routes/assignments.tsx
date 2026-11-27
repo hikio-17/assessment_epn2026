@@ -5,6 +5,7 @@ import {
 } from "react-router";
 import {
   ClipboardList,
+  Loader2,
   Pencil,
   Plus,
   RefreshCw,
@@ -17,6 +18,7 @@ import {
   hasRole,
   requireAuthenticatedUser,
 } from "~/authorization.server";
+import { ConfirmDialog } from "~/components/confirm-dialog";
 import { LoadingBar } from "~/components/loading-bar";
 import { PageHeader } from "~/components/page-header";
 import { Toaster } from "~/components/toaster";
@@ -24,6 +26,7 @@ import { ApiError, useFetch } from "~/hooks/use-fetch";
 import {
   ASSIGNMENT_STATUS_LABELS,
 } from "~/lib/constants";
+import { usePageLoading } from "~/lib/page-loading";
 import { pushToast } from "~/lib/toast-store";
 import type {
   AssignmentDTO,
@@ -42,7 +45,7 @@ export async function loader({
 }
 
 export function meta() {
-  return [{ title: "Assignments - PeopleOps" }];
+  return [{ title: "Penugasan - PeopleOps" }];
 }
 
 const statusStyles = {
@@ -87,6 +90,11 @@ export default function AssignmentsPage() {
     useState("");
   const [raceRunning, setRaceRunning] =
     useState(false);
+  const [pendingDelete, setPendingDelete] =
+    useState<AssignmentDTO | null>(null);
+  const [deletingId, setDeletingId] = useState<
+    number | null
+  >(null);
 
   const employees = useFetch<EmployeeOptionDTO[]>(
     departmentId
@@ -100,6 +108,12 @@ export default function AssignmentsPage() {
   );
 
   const submitLock = useRef(false);
+
+  usePageLoading(
+    assignments.loading ||
+      assignments.submitting ||
+      raceRunning,
+  );
 
   const rows = assignments.data ?? [];
   const employeeOptions = employees.data ?? [];
@@ -172,7 +186,7 @@ export default function AssignmentsPage() {
         variant: "error",
         title: "Lengkapi form",
         description:
-          "Department dan employee wajib dipilih.",
+          "Departemen dan karyawan wajib dipilih.",
       });
       return;
     }
@@ -218,8 +232,8 @@ export default function AssignmentsPage() {
         id: operationId,
         variant: "success",
         title: editingId
-          ? "Assignment diperbarui"
-          : "Assignment dibuat",
+          ? "Penugasan diperbarui"
+          : "Penugasan dibuat",
         description: title,
       });
 
@@ -229,7 +243,7 @@ export default function AssignmentsPage() {
       pushToast({
         id: operationId,
         variant: "error",
-        title: "Assignment gagal disimpan",
+        title: "Penugasan gagal disimpan",
         description: errorText(error),
       });
     } finally {
@@ -244,15 +258,8 @@ export default function AssignmentsPage() {
       return;
     }
 
-    if (
-      !window.confirm(
-        `Hapus assignment "${assignment.title}"?`,
-      )
-    ) {
-      return;
-    }
-
     const operationId = crypto.randomUUID();
+    setDeletingId(assignment.id);
 
     try {
       await assignments.request({
@@ -267,7 +274,7 @@ export default function AssignmentsPage() {
       pushToast({
         id: operationId,
         variant: "success",
-        title: "Assignment dihapus",
+        title: "Penugasan dihapus",
         description: assignment.title,
       });
 
@@ -276,9 +283,11 @@ export default function AssignmentsPage() {
       pushToast({
         id: operationId,
         variant: "error",
-        title: "Assignment gagal dihapus",
+        title: "Penugasan gagal dihapus",
         description: errorText(error),
       });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -330,7 +339,7 @@ export default function AssignmentsPage() {
           successes === 1 && conflicts === 2
             ? "success"
             : "info",
-        title: "Concurrency test selesai",
+        title: "Uji konkurensi selesai",
         description: `HTTP ${statuses.join(" / ")}`,
         duration: 6000,
       });
@@ -341,7 +350,7 @@ export default function AssignmentsPage() {
       pushToast({
         id: operationId,
         variant: "error",
-        title: "Concurrency test gagal",
+        title: "Uji konkurensi gagal",
         description: errorText(error),
         duration: 6000,
       });
@@ -350,12 +359,6 @@ export default function AssignmentsPage() {
     }
   };
 
-  const isLoading =
-    departments.loading ||
-    assignments.loading ||
-    employees.loading ||
-    raceEmployees.loading;
-
   return (
     <div className="space-y-6">
       <Toaster />
@@ -363,10 +366,10 @@ export default function AssignmentsPage() {
       <PageHeader
         breadcrumbs={[
           { label: "Workspace", to: "/" },
-          { label: "Assignments" },
+          { label: "Penugasan" },
         ]}
-        title="Assignments"
-        description="CRUD assignment dengan dependent dropdown, loading bar, toast, dan pengamanan concurrency di database."
+        title="Penugasan"
+        description="Kelola pekerjaan aktif karyawan dan status penyelesaiannya."
         actions={
           canWrite ? (
             <button
@@ -375,17 +378,15 @@ export default function AssignmentsPage() {
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-indigo-500"
             >
               <Plus className="h-4 w-4" />
-              New assignment
+              Tambah penugasan
             </button>
           ) : null
         }
       />
 
-      <LoadingBar active={isLoading || assignments.submitting || raceRunning} />
-
       {!canWrite ? (
         <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500">
-          Anda hanya memiliki akses baca untuk module assignment.
+          Anda hanya memiliki akses baca untuk modul penugasan.
         </div>
       ) : null}
 
@@ -409,19 +410,19 @@ export default function AssignmentsPage() {
             <div>
               <h2 className="text-lg font-semibold">
                 {editing
-                  ? `Edit: ${editing.title}`
-                  : "Create assignment"}
+                  ? `Ubah: ${editing.title}`
+                  : "Tambah penugasan"}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Pilih department terlebih dahulu, lalu employee
-                akan dimuat sebagai child dropdown.
+                Pilih departemen terlebih dahulu, lalu pilih
+                karyawan yang akan ditugaskan.
               </p>
             </div>
 
             <div className="flex items-center gap-2">
               {editing ? (
                 <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                  Version {editing.version}
+  Versi {editing.version}
                 </span>
               ) : null}
 
@@ -430,7 +431,7 @@ export default function AssignmentsPage() {
                 onClick={resetForm}
                 disabled={assignments.submitting}
                 className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-                aria-label="Close form"
+                aria-label="Tutup form"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -449,7 +450,7 @@ export default function AssignmentsPage() {
                 onClick={() => departments.refetch()}
                 className="font-semibold underline"
               >
-                Retry
+                Coba lagi
               </button>
             </div>
           ) : null}
@@ -466,7 +467,7 @@ export default function AssignmentsPage() {
                   htmlFor="title"
                   className="mb-1.5 block text-sm font-medium text-slate-700"
                 >
-                  Assignment name
+                  Nama penugasan
                 </label>
                 <input
                   id="title"
@@ -490,8 +491,8 @@ export default function AssignmentsPage() {
                   defaultValue={editing?.status ?? "ACTIVE"}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:bg-white"
                 >
-                  <option value="ACTIVE">Active</option>
-                  <option value="COMPLETED">Completed</option>
+                  <option value="ACTIVE">Aktif</option>
+                  <option value="COMPLETED">Selesai</option>
                 </select>
               </div>
 
@@ -500,7 +501,7 @@ export default function AssignmentsPage() {
                   htmlFor="departmentId"
                   className="mb-1.5 block text-sm font-medium text-slate-700"
                 >
-                  Department
+                  Departemen
                 </label>
                 <select
                   id="departmentId"
@@ -513,8 +514,8 @@ export default function AssignmentsPage() {
                 >
                   <option value="">
                     {departments.loading
-                      ? "Loading departments..."
-                      : "Select department"}
+                      ? "Memuat departemen..."
+                      : "Pilih departemen"}
                   </option>
                   {(departments.data ?? []).map((department) => (
                     <option
@@ -532,7 +533,7 @@ export default function AssignmentsPage() {
                   htmlFor="employeeId"
                   className="mb-1.5 block text-sm font-medium text-slate-700"
                 >
-                  Employee
+                  Karyawan
                 </label>
                 <select
                   id="employeeId"
@@ -545,10 +546,10 @@ export default function AssignmentsPage() {
                 >
                   <option value="">
                     {!departmentId
-                      ? "Select department first"
+                      ? "Pilih departemen dulu"
                       : employees.loading
-                        ? "Loading employees..."
-                        : "Select employee"}
+                        ? "Memuat karyawan..."
+                        : "Pilih karyawan"}
                   </option>
                   {employeeOptions.map((employee) => (
                     <option
@@ -575,9 +576,10 @@ export default function AssignmentsPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  disabled={assignments.submitting}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
                 >
-                  Cancel edit
+                  Batal
                 </button>
               ) : null}
 
@@ -588,12 +590,16 @@ export default function AssignmentsPage() {
                 }
                 className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <ClipboardList className="h-4 w-4" />
+                {assignments.submitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ClipboardList className="h-4 w-4" />
+                )}
                 {assignments.submitting
-                  ? "Saving..."
+                  ? "Menyimpan..."
                   : editing
-                    ? "Save changes"
-                    : "Create assignment"}
+                    ? "Simpan perubahan"
+                    : "Tambah penugasan"}
               </button>
             </div>
           </Form>
@@ -607,12 +613,11 @@ export default function AssignmentsPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">
-                Race condition demo
+                Uji konkurensi
               </h2>
               <p className="mt-1 max-w-2xl text-sm text-slate-500">
-                Tiga request create dikirim bersamaan. Backend
-                memakai transaction, pessimistic lock, partial
-                unique index, dan retry untuk menjaga konsistensi.
+                Kirim tiga permintaan penugasan sekaligus untuk
+                memastikan hanya satu yang tersimpan.
               </p>
             </div>
 
@@ -634,8 +639,8 @@ export default function AssignmentsPage() {
                 }`}
               />
               {raceRunning
-                ? "Running..."
-                : "Run 3 concurrent creates"}
+                ? "Menjalankan..."
+                : "Jalankan 3 permintaan"}
             </button>
           </div>
 
@@ -651,7 +656,7 @@ export default function AssignmentsPage() {
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:bg-white disabled:opacity-60"
             >
               <option value="">
-                Select race department
+                Pilih departemen
               </option>
               {(departments.data ?? []).map(
                 (department) => (
@@ -679,12 +684,12 @@ export default function AssignmentsPage() {
             >
               <option value="">
                 {!raceDepartmentId
-                  ? "Select department first"
+                  ? "Pilih departemen dulu"
                   : raceEmployees.loading
-                    ? "Loading employees..."
+                    ? "Memuat karyawan..."
                     : raceCandidates.length === 0
-                      ? "No available employee"
-                      : "Select employee"}
+                      ? "Tidak ada karyawan tersedia"
+                      : "Pilih karyawan"}
               </option>
               {raceCandidates.map((employee) => (
                 <option
@@ -710,12 +715,12 @@ export default function AssignmentsPage() {
             {raceEmployee
               ? `Target: ${raceEmployee.name}`
               : !raceDepartmentId
-                ? "Pilih department dan employee untuk menjalankan demo."
+                ? "Pilih departemen dan karyawan untuk menjalankan demo."
                 : raceEmployees.loading
-                  ? "Memuat employee..."
+                  ? "Memuat karyawan..."
                   : raceCandidates.length === 0
-                    ? "Semua employee di department ini sudah punya assignment ACTIVE."
-                    : "Pilih employee yang belum punya assignment ACTIVE."}
+                    ? "Semua karyawan di departemen ini sudah punya penugasan aktif."
+                    : "Pilih karyawan yang belum punya penugasan aktif."}
           </p>
         </section>
       ) : null}
@@ -723,7 +728,7 @@ export default function AssignmentsPage() {
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
           <h2 className="text-sm font-semibold">
-            Assignment list
+            Daftar penugasan
           </h2>
           <p className="text-xs text-slate-500">
             {rows.length} assignment
@@ -747,7 +752,7 @@ export default function AssignmentsPage() {
               onClick={() => assignments.refetch()}
               className="font-semibold underline"
             >
-              Retry
+              Coba lagi
             </button>
           </div>
         ) : rows.length === 0 ? (
@@ -761,19 +766,19 @@ export default function AssignmentsPage() {
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-6 py-3 font-semibold">
-                    Assignment
+                    Penugasan
                   </th>
                   <th className="px-6 py-3 font-semibold">
-                    Department
+                    Departemen
                   </th>
                   <th className="px-6 py-3 font-semibold">
-                    Employee
+                    Karyawan
                   </th>
                   <th className="px-6 py-3 font-semibold">
                     Status
                   </th>
                   <th className="px-6 py-3 font-semibold">
-                    Version
+                    Versi
                   </th>
                   <th className="px-6 py-3 text-right font-semibold">
                     Action
@@ -827,25 +832,34 @@ export default function AssignmentsPage() {
                           <button
                             type="button"
                             onClick={() => startEdit(assignment)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-amber-200 hover:text-amber-700"
+                            disabled={assignments.submitting}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-amber-200 hover:text-amber-700 disabled:opacity-50"
                           >
                             <Pencil className="h-3.5 w-3.5" />
-                            Edit
+                            Ubah
                           </button>
 
                           <button
                             type="button"
-                            onClick={() => handleDelete(assignment)}
+                            onClick={() =>
+                              setPendingDelete(assignment)
+                            }
                             disabled={assignments.submitting}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
+                            {deletingId === assignment.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                            {deletingId === assignment.id
+                              ? "Menghapus..."
+                              : "Hapus"}
                           </button>
                         </div>
                       ) : (
                         <span className="block text-right text-xs text-slate-400">
-                          Read only
+                          Hanya lihat
                         </span>
                       )}
                     </td>
@@ -856,6 +870,25 @@ export default function AssignmentsPage() {
           </div>
         )}
       </section>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Hapus penugasan?"
+        description={
+          pendingDelete
+            ? `Penugasan "${pendingDelete.title}" akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.`
+            : ""
+        }
+        confirmLabel="Hapus penugasan"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (!pendingDelete) return;
+
+          const assignment = pendingDelete;
+          setPendingDelete(null);
+          void handleDelete(assignment);
+        }}
+      />
     </div>
   );
 }

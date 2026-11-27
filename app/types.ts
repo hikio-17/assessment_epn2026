@@ -15,6 +15,27 @@ export type AuthSessionData = {
   userId: number;
 };
 
+export type UserDTO = {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  createdAt: string;
+};
+
+export type UserFormValues = {
+  name: string;
+  email: string;
+  role: string;
+};
+
+export type UserActionData = {
+  ok: boolean;
+  message: string;
+  fieldErrors?: Record<string, string>;
+  values?: UserFormValues;
+};
+
 export type DepartmentDTO = {
   id: number;
   code: string;

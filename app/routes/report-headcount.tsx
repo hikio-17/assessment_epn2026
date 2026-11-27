@@ -23,7 +23,7 @@ export async function loader({
 }
 
 export function meta() {
-  return [{ title: "Headcount report - PeopleOps" }];
+  return [{ title: "Laporan tenaga kerja - PeopleOps" }];
 }
 
 export default function ReportHeadcountPage() {
@@ -37,33 +37,33 @@ export default function ReportHeadcountPage() {
 
   const kpis = [
     {
-      label: "Total employees",
+      label: "Total karyawan",
       value: report.totals.employees.toLocaleString(
         "id-ID",
       ),
     },
     {
-      label: "Active",
+      label: "Aktif",
       value: report.totals.active.toLocaleString("id-ID"),
     },
     {
-      label: "Inactive",
+      label: "Nonaktif",
       value: report.totals.inactive.toLocaleString(
         "id-ID",
       ),
     },
     {
-      label: "Departments",
+      label: "Departemen",
       value: report.totals.departments.toLocaleString(
         "id-ID",
       ),
     },
     {
-      label: "Monthly payroll",
+      label: "Payroll bulanan",
       value: formatRupiah(report.totals.payroll),
     },
     {
-      label: "Average salary",
+      label: "Rata-rata gaji",
       value: formatRupiah(report.totals.averageSalary),
     },
   ];
@@ -73,11 +73,11 @@ export default function ReportHeadcountPage() {
       <PageHeader
         breadcrumbs={[
           { label: "Workspace", to: "/" },
-          { label: "Reports", to: "/reports" },
-          { label: "Headcount & payroll" },
+          { label: "Laporan", to: "/reports" },
+          { label: "Karyawan & payroll" },
         ]}
-        title="Headcount & payroll"
-        description={`Ringkasan komposisi karyawan, status aktif, dan distribusi payroll per department · ${formatDate(report.generatedAt)}`}
+        title="Karyawan & payroll"
+        description={`Ringkasan komposisi karyawan dan distribusi gaji · ${formatDate(report.generatedAt)}`}
         actions={
           <div className="flex flex-wrap gap-2 print:hidden">
             {canExport ? (
@@ -86,11 +86,11 @@ export default function ReportHeadcountPage() {
                 className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-stone-700"
               >
                 <Download className="h-4 w-4" />
-                Export CSV
+                Ekspor CSV
               </a>
             ) : (
               <span className="rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-xs font-semibold text-stone-400">
-                Export khusus HR/Admin
+                Ekspor khusus HR/Admin
               </span>
             )}
 
@@ -100,7 +100,7 @@ export default function ReportHeadcountPage() {
               className="inline-flex items-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-xs font-semibold text-stone-700 transition hover:bg-stone-50"
             >
               <Printer className="h-4 w-4" />
-              Print
+              Cetak
             </button>
           </div>
         }
@@ -126,10 +126,10 @@ export default function ReportHeadcountPage() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-serif text-2xl font-semibold">
-              Payroll distribution
+              Distribusi gaji
             </h2>
             <p className="mt-1 text-sm text-stone-500">
-              Proporsi payroll tiap department terhadap total
+              Proporsi gaji tiap departemen terhadap total
               payroll.
             </p>
           </div>
@@ -181,10 +181,10 @@ export default function ReportHeadcountPage() {
       <section className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm print:break-inside-avoid print:shadow-none">
         <div className="border-b border-stone-200 px-6 py-4">
           <h2 className="font-serif text-2xl font-semibold">
-            Department breakdown
+            Rincian per departemen
           </h2>
           <p className="mt-1 text-sm text-stone-500">
-            Headcount dan payroll per department.
+            Jumlah karyawan dan payroll tiap departemen.
           </p>
         </div>
 
@@ -193,22 +193,22 @@ export default function ReportHeadcountPage() {
             <thead className="bg-stone-50 text-xs uppercase tracking-wider text-stone-500">
               <tr>
                 <th className="px-6 py-3 font-semibold">
-                  Department
+                  Departemen
                 </th>
                 <th className="px-6 py-3 text-right font-semibold">
-                  Headcount
+                  Karyawan
                 </th>
                 <th className="px-6 py-3 text-right font-semibold">
-                  Active
+                  Aktif
                 </th>
                 <th className="px-6 py-3 text-right font-semibold">
-                  Inactive
+                  Nonaktif
                 </th>
                 <th className="px-6 py-3 text-right font-semibold">
                   Payroll
                 </th>
                 <th className="px-6 py-3 text-right font-semibold">
-                  Share
+                  Porsi
                 </th>
               </tr>
             </thead>
@@ -266,9 +266,7 @@ export default function ReportHeadcountPage() {
       </section>
 
       <p className="text-xs text-stone-400 print:block">
-        Generated at {formatDate(report.generatedAt)} ·
-        Data diambil langsung dari database melalui server
-        loader.
+        Dibuat {formatDate(report.generatedAt)}.
       </p>
     </div>
   );

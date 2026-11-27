@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Form,
   Link,
@@ -5,9 +6,11 @@ import {
   useLoaderData,
   useNavigation,
   useSearchParams,
+  useSubmit,
 } from "react-router";
 import {
   Eye,
+  Loader2,
   Pencil,
   Plus,
   Search,
@@ -20,6 +23,7 @@ import {
   hasRole,
   requireAuthenticatedUser,
 } from "~/authorization.server";
+import { ConfirmDialog } from "~/components/confirm-dialog";
 import { EmployeeAvatar } from "~/components/employee-avatar";
 import { EmployeeForm } from "~/components/employee-form";
 import { PageHeader } from "~/components/page-header";
@@ -142,7 +146,7 @@ export async function action({
         if (!employeeId) {
           return employeeActionError(
             new ValidationError(
-              "Employee ID tidak valid.",
+              "ID karyawan tidak valid.",
             ),
             "update",
           );
@@ -156,7 +160,7 @@ export async function action({
         );
 
         return employeeActionSuccess(
-          "Employee berhasil diperbarui.",
+          "Karyawan berhasil diperbarui.",
           employee,
           parsed.values,
           "update",
@@ -169,7 +173,7 @@ export async function action({
       );
 
       return employeeActionSuccess(
-        "Employee berhasil dibuat.",
+        "Karyawan berhasil dibuat.",
         employee,
         parsed.values,
         "create",
@@ -181,7 +185,7 @@ export async function action({
 
   if (intent !== "delete") {
     return employeeActionError(
-      new ValidationError("Aksi tidak dikenal."),
+      new ValidationError("Action tidak dikenal."),
     );
   }
 
@@ -191,7 +195,7 @@ export async function action({
 
   if (!employeeId) {
     return employeeActionError(
-      new ValidationError("Employee ID tidak valid."),
+      new ValidationError("ID karyawan tidak valid."),
       "delete",
     );
   }
@@ -200,7 +204,7 @@ export async function action({
     await deleteEmployee(employeeId);
 
     return employeeActionSuccess(
-      "Employee berhasil dihapus.",
+      "Karyawan berhasil dihapus.",
       undefined,
       undefined,
       "delete",
@@ -211,7 +215,7 @@ export async function action({
 }
 
 export function meta() {
-  return [{ title: "Employees - PeopleOps" }];
+  return [{ title: "Karyawan - PeopleOps" }];
 }
 
 function buildPageLink(
@@ -280,9 +284,18 @@ export default function EmployeesListPage() {
 
   const actionData = useActionData<EmployeeActionData>();
   const navigation = useNavigation();
+  const submit = useSubmit();
   const submitting = navigation.state === "submitting";
   const [searchParams, setSearchParams] =
     useSearchParams();
+  const [pendingDelete, setPendingDelete] =
+    useState<EmployeeDTO | null>(null);
+
+  const deletingEmployeeId =
+    submitting &&
+    navigation.formData?.get("intent") === "delete"
+      ? Number(navigation.formData.get("employeeId"))
+      : null;
 
   const modalType = searchParams.get("form");
   const modalOpen =
@@ -339,10 +352,10 @@ export default function EmployeesListPage() {
       <PageHeader
         breadcrumbs={[
           { label: "Workspace", to: "/" },
-          { label: "Employees" },
+          { label: "Karyawan" },
         ]}
-        title="Employees"
-        description="Kelola data karyawan, department, dan status kepegawaian."
+        title="Karyawan"
+        description="Data karyawan, departemen, dan status kepegawaian."
         actions={
           canManage ? (
             <button
@@ -351,11 +364,11 @@ export default function EmployeesListPage() {
               className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-indigo-500"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add employee
+              Tambah karyawan
             </button>
           ) : (
             <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
-              Read-only access
+              Hanya lihat
             </span>
           )
         }
@@ -372,7 +385,7 @@ export default function EmployeesListPage() {
           <input
             name="q"
             defaultValue={filters.search ?? ""}
-            placeholder="Search name, email, or position..."
+            placeholder="Cari nama, email, atau posisi..."
             className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 text-sm outline-none transition focus:border-indigo-400 focus:bg-white"
           />
         </div>
@@ -386,7 +399,7 @@ export default function EmployeesListPage() {
           }
           className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:bg-white md:w-64"
         >
-          <option value="">All departments</option>
+          <option value="">Semua departemen</option>
           {departments.map((department) => (
             <option
               key={department.id}
@@ -401,7 +414,7 @@ export default function EmployeesListPage() {
           type="submit"
           className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
         >
-          Filter
+          Terapkan
         </button>
 
         {hasFilter ? (
@@ -409,7 +422,7 @@ export default function EmployeesListPage() {
             to="/employees"
             className="rounded-xl border border-slate-200 px-4 py-2.5 text-center text-sm font-semibold text-slate-500 transition hover:bg-slate-50"
           >
-            Reset
+            Atur ulang
           </Link>
         ) : null}
       </Form>
@@ -430,10 +443,10 @@ export default function EmployeesListPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
           <div>
             <h2 className="text-sm font-semibold">
-              Employee directory
+              Daftar karyawan
             </h2>
             <p className="mt-1 text-xs text-slate-500">
-              Showing {start}–{end} of {total}
+              Menampilkan {start}–{end} dari {total}
             </p>
           </div>
         </div>
@@ -441,10 +454,10 @@ export default function EmployeesListPage() {
         {employees.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-lg font-semibold text-slate-700">
-              No employees found
+              Data tidak ditemukan
             </p>
             <p className="mt-2 text-sm text-slate-500">
-              Coba ubah kata kunci atau filter department.
+              Coba ubah kata kunci atau filter departemen.
             </p>
           </div>
         ) : (
@@ -453,16 +466,16 @@ export default function EmployeesListPage() {
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-6 py-3 font-semibold">
-                    Employee
+                    Karyawan
                   </th>
                   <th className="px-6 py-3 font-semibold">
-                    Department
+                    Departemen
                   </th>
                   <th className="px-6 py-3 font-semibold">
-                    Position
+                    Posisi
                   </th>
                   <th className="px-6 py-3 font-semibold">
-                    Salary
+                    Gaji
                   </th>
                   <th className="px-6 py-3 font-semibold">
                     Status
@@ -533,7 +546,7 @@ export default function EmployeesListPage() {
                           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
                         >
                           <Eye className="h-3.5 w-3.5" />
-                          View
+                          Lihat
                         </Link>
 
                         {canManage ? (
@@ -541,43 +554,31 @@ export default function EmployeesListPage() {
                             <button
                               type="button"
                               onClick={() => openEdit(employee)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-amber-200 hover:text-amber-700"
+                              disabled={submitting}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-amber-200 hover:text-amber-700 disabled:opacity-50"
                             >
                               <Pencil className="h-3.5 w-3.5" />
-                              Edit
+                              Ubah
                             </button>
 
-                            <Form
-                              method="post"
-                              onSubmit={(event) => {
-                                if (
-                                  !window.confirm(
-                                    `Hapus employee ${employee.name}?`,
-                                  )
-                                ) {
-                                  event.preventDefault();
-                                }
-                              }}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPendingDelete(employee)
+                              }
+                              disabled={submitting}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
                             >
-                              <input
-                                type="hidden"
-                                name="intent"
-                                value="delete"
-                              />
-                              <input
-                                type="hidden"
-                                name="employeeId"
-                                value={employee.id}
-                              />
-
-                              <button
-                                type="submit"
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
-                              >
+                              {deletingEmployeeId ===
+                              employee.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
                                 <Trash2 className="h-3.5 w-3.5" />
-                                Delete
-                              </button>
-                            </Form>
+                              )}
+                              {deletingEmployeeId === employee.id
+                                ? "Menghapus..."
+                                : "Hapus"}
+                            </button>
                           </>
                         ) : null}
                       </div>
@@ -598,16 +599,16 @@ export default function EmployeesListPage() {
               to={buildPageLink(page - 1, filters)}
               className="rounded-lg border border-slate-200 px-3 py-1.5 font-semibold text-slate-600 hover:bg-slate-50"
             >
-              Previous
+              Sebelumnya
             </Link>
           ) : (
             <span className="px-3 py-1.5 text-slate-300">
-              Previous
+              Sebelumnya
             </span>
           )}
 
           <span className="text-xs font-medium text-slate-500">
-            Page {page} of {totalPages}
+            Halaman {page} dari {totalPages}
           </span>
 
           {page < totalPages ? (
@@ -615,11 +616,11 @@ export default function EmployeesListPage() {
               to={buildPageLink(page + 1, filters)}
               className="rounded-lg border border-slate-200 px-3 py-1.5 font-semibold text-slate-600 hover:bg-slate-50"
             >
-              Next
+              Berikutnya
             </Link>
           ) : (
             <span className="px-3 py-1.5 text-slate-300">
-              Next
+              Berikutnya
             </span>
           )}
         </div>
@@ -648,13 +649,13 @@ export default function EmployeesListPage() {
                   className="text-xl font-semibold"
                 >
                   {editingEmployee
-                    ? "Edit employee"
-                    : "Add employee"}
+                    ? "Ubah karyawan"
+                    : "Tambah karyawan"}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
                   {editingEmployee
-                    ? "Perbarui data employee yang sudah ada."
-                    : "Lengkapi data employee baru."}
+                    ? "Perbarui data karyawan yang sudah ada."
+                    : "Lengkapi data karyawan baru."}
                 </p>
               </div>
 
@@ -663,7 +664,7 @@ export default function EmployeesListPage() {
                 onClick={closeModal}
                 disabled={submitting}
                 className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-                aria-label="Close form"
+                aria-label="Tutup form"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -689,6 +690,31 @@ export default function EmployeesListPage() {
           </div>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Hapus karyawan?"
+        description={
+          pendingDelete
+            ? `Data ${pendingDelete.name} akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.`
+            : ""
+        }
+        confirmLabel="Hapus karyawan"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (!pendingDelete) return;
+
+          const employeeId = pendingDelete.id;
+          setPendingDelete(null);
+          submit(
+            {
+              intent: "delete",
+              employeeId: String(employeeId),
+            },
+            { method: "post" },
+          );
+        }}
+      />
     </div>
   );
 }

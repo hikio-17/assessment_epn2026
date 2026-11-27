@@ -68,7 +68,7 @@ export async function action({
     );
 
     return employeeActionSuccess(
-      "Employee berhasil dibuat.",
+      "Karyawan berhasil dibuat.",
       employee,
       parsed.values,
       "create",
@@ -79,7 +79,7 @@ export async function action({
 }
 
 export function meta() {
-  return [{ title: "Add employee - PeopleOps" }];
+  return [{ title: "Tambah karyawan - PeopleOps" }];
 }
 
 export default function EmployeeNewPage() {
@@ -95,11 +95,11 @@ export default function EmployeeNewPage() {
       <PageHeader
         breadcrumbs={[
           { label: "Workspace", to: "/" },
-          { label: "Employees", to: "/employees" },
-          { label: "Add employee" },
+          { label: "Karyawan", to: "/employees" },
+          { label: "Tambah karyawan" },
         ]}
-        title="Add employee"
-        description="Data disimpan lewat server action; feedback validasi muncul langsung di halaman."
+        title="Tambah karyawan"
+        description="Lengkapi data karyawan baru, termasuk departemen dan foto profil."
       />
 
       <EmployeeForm

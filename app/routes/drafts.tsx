@@ -1,17 +1,21 @@
+import { useState } from "react";
 import {
   Form,
   data,
   useActionData,
   useLoaderData,
   useNavigation,
+  useSubmit,
 } from "react-router";
 import {
+  Loader2,
   NotebookPen,
   Trash2,
   X,
 } from "lucide-react";
 
 import type { Route } from "./+types/drafts";
+import { ConfirmDialog } from "~/components/confirm-dialog";
 import { PageHeader } from "~/components/page-header";
 import {
   clearDraftCache,
@@ -165,7 +169,7 @@ export async function clientAction({
 }
 
 export function meta() {
-  return [{ title: "Employee drafts - PeopleOps" }];
+  return [{ title: "Draf karyawan - PeopleOps" }];
 }
 
 function DraftSkeleton() {
@@ -190,10 +194,10 @@ export function HydrateFallback() {
       <PageHeader
         breadcrumbs={[
           { label: "Workspace", to: "/" },
-          { label: "Drafts" },
+          { label: "Draf" },
         ]}
-        title="Employee drafts"
-        description="Draft disimpan di localStorage browser ini. Tidak masuk database dan tidak terkirim ke server."
+        title="Draf karyawan"
+        description="Simpan data calon karyawan sementara di browser ini."
       />
       <DraftSkeleton />
     </div>
@@ -209,8 +213,22 @@ export default function DraftsPage() {
   const actionData =
     useActionData<DraftActionData>();
   const navigation = useNavigation();
+  const submit = useSubmit();
   const submitting =
     navigation.state === "submitting";
+  const [pendingDelete, setPendingDelete] =
+    useState<EmployeeDraft | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  const pendingIntent = submitting
+    ? String(navigation.formData?.get("intent") ?? "")
+    : "";
+  const deletingDraftId =
+    pendingIntent === "delete"
+      ? String(navigation.formData?.get("id") ?? "")
+      : null;
+  const clearing = pendingIntent === "clear";
+  const saving = pendingIntent === "create";
 
   const fieldErrors =
     actionData?.fieldErrors ?? {};
@@ -220,15 +238,15 @@ export default function DraftsPage() {
       <PageHeader
         breadcrumbs={[
           { label: "Workspace", to: "/" },
-          { label: "Drafts" },
+          { label: "Draf" },
         ]}
-        title="Employee drafts"
-        description="Draft disimpan di localStorage browser ini. Tidak masuk database dan tidak terkirim ke server."
+        title="Draf karyawan"
+        description="Simpan data calon karyawan sementara di browser ini."
         actions={
           <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
             {loaderData.storageAvailable
-              ? "localStorage active"
-              : "localStorage unavailable"}
+              ? "Penyimpanan lokal aktif"
+              : "Penyimpanan lokal tidak tersedia"}
             {loaderData.savedAt
               ? ` · ${loaderData.savedAt.slice(0, 10)}`
               : ""}
@@ -251,10 +269,10 @@ export default function DraftsPage() {
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold">
-          New draft
+          Draf baru
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Data sementara untuk calon employee.
+          Data sementara untuk calon karyawan.
         </p>
 
         <Form
@@ -275,7 +293,7 @@ export default function DraftsPage() {
                 htmlFor="draft-name"
                 className="mb-1.5 block text-sm font-medium text-slate-700"
               >
-                Name
+                Nama
               </label>
               <input
                 id="draft-name"
@@ -320,7 +338,7 @@ export default function DraftsPage() {
                 htmlFor="draft-position"
                 className="mb-1.5 block text-sm font-medium text-slate-700"
               >
-                Position
+                Posisi
               </label>
               <input
                 id="draft-position"
@@ -344,7 +362,7 @@ export default function DraftsPage() {
                 htmlFor="draft-note"
                 className="mb-1.5 block text-sm font-medium text-slate-700"
               >
-                Note
+                Catatan
               </label>
               <input
                 id="draft-note"
@@ -368,8 +386,12 @@ export default function DraftsPage() {
               disabled={submitting}
               className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <NotebookPen className="h-4 w-4" />
-              {submitting ? "Saving..." : "Save draft"}
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <NotebookPen className="h-4 w-4" />
+              )}
+              {saving ? "Menyimpan..." : "Simpan draf"}
             </button>
           </div>
         </Form>
@@ -379,40 +401,27 @@ export default function DraftsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">
-              Saved drafts
+              Draf tersimpan
             </h2>
             <p className="text-sm text-slate-500">
-              {loaderData.drafts.length} draft di browser ini.
+              {loaderData.drafts.length} draf tersimpan di browser ini.
             </p>
           </div>
 
           {loaderData.drafts.length > 0 ? (
-            <Form
-              method="post"
-              onSubmit={(event) => {
-                if (
-                  !window.confirm(
-                    "Hapus semua draft dari localStorage?",
-                  )
-                ) {
-                  event.preventDefault();
-                }
-              }}
+            <button
+              type="button"
+              onClick={() => setConfirmClear(true)}
+              disabled={submitting}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
             >
-              <input
-                type="hidden"
-                name="intent"
-                value="clear"
-              />
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
-              >
+              {clearing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
                 <X className="h-3.5 w-3.5" />
-                Clear all
-              </button>
-            </Form>
+              )}
+              {clearing ? "Menghapus..." : "Hapus semua"}
+            </button>
           ) : null}
         </div>
 
@@ -437,37 +446,23 @@ export default function DraftsPage() {
                     </p>
                   </div>
 
-                  <Form
-                    method="post"
-                    onSubmit={(event) => {
-                      if (
-                        !window.confirm(
-                          `Hapus draft ${draft.name}?`,
-                        )
-                      ) {
-                        event.preventDefault();
-                      }
-                    }}
+                  <button
+                    type="button"
+                    onClick={() => setPendingDelete(draft)}
+                    disabled={submitting}
+                    className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                    aria-label={
+                      deletingDraftId === draft.id
+                        ? `Menghapus draft ${draft.name}`
+                        : `Hapus draft ${draft.name}`
+                    }
                   >
-                    <input
-                      type="hidden"
-                      name="intent"
-                      value="delete"
-                    />
-                    <input
-                      type="hidden"
-                      name="id"
-                      value={draft.id}
-                    />
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-                      aria-label={`Hapus draft ${draft.name}`}
-                    >
+                    {deletingDraftId === draft.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
                       <Trash2 className="h-4 w-4" />
-                    </button>
-                  </Form>
+                    )}
+                  </button>
                 </div>
 
                 <p className="mt-4 text-sm font-medium text-slate-700">
@@ -481,13 +476,50 @@ export default function DraftsPage() {
                 ) : null}
 
                 <p className="mt-4 border-t border-slate-100 pt-3 text-[10px] uppercase tracking-wider text-slate-400">
-                  Saved {draft.createdAt.slice(0, 10)}
+                  Disimpan {draft.createdAt.slice(0, 10)}
                 </p>
               </article>
             ))}
           </div>
         )}
       </section>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Hapus draft?"
+        description={
+          pendingDelete
+            ? `Draft ${pendingDelete.name} akan dihapus dari browser ini.`
+            : ""
+        }
+        confirmLabel="Hapus draft"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (!pendingDelete) return;
+
+          const id = pendingDelete.id;
+          setPendingDelete(null);
+          submit(
+            { intent: "delete", id },
+            { method: "post" },
+          );
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmClear}
+        title="Hapus semua draft?"
+        description="Semua draft di browser ini akan dihapus. Tindakan ini tidak bisa dibatalkan."
+        confirmLabel="Hapus semua"
+        onCancel={() => setConfirmClear(false)}
+        onConfirm={() => {
+          setConfirmClear(false);
+          submit(
+            { intent: "clear" },
+            { method: "post" },
+          );
+        }}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import {
 } from "react-router";
 import {
   ArrowLeft,
+  Loader2,
   Save,
   Upload,
 } from "lucide-react";
@@ -80,7 +81,7 @@ export function EmployeeForm({
               to={`/employees/${actionData.employee.id}`}
               className="mt-2 inline-flex text-xs font-semibold underline underline-offset-2"
             >
-              View employee
+              Lihat karyawan
             </Link>
           ) : null}
         </div>
@@ -111,7 +112,7 @@ export function EmployeeForm({
               htmlFor="name"
               className="mb-1.5 block text-sm font-medium text-slate-700"
             >
-              Full name
+              Nama lengkap
             </label>
             <input
               id="name"
@@ -148,7 +149,7 @@ export function EmployeeForm({
               htmlFor="position"
               className="mb-1.5 block text-sm font-medium text-slate-700"
             >
-              Position
+              Posisi
             </label>
             <input
               id="position"
@@ -168,7 +169,7 @@ export function EmployeeForm({
               htmlFor="departmentId"
               className="mb-1.5 block text-sm font-medium text-slate-700"
             >
-              Department
+              Departemen
             </label>
             <select
               id="departmentId"
@@ -180,7 +181,7 @@ export function EmployeeForm({
               className={inputClass}
             >
               <option value="">
-                Select department
+                Pilih departemen
               </option>
               {departments.map((department) => (
                 <option
@@ -201,7 +202,7 @@ export function EmployeeForm({
               htmlFor="salary"
               className="mb-1.5 block text-sm font-medium text-slate-700"
             >
-              Salary (IDR)
+              Gaji (IDR)
             </label>
             <input
               id="salary"
@@ -245,7 +246,7 @@ export function EmployeeForm({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             {currentPhotoUrl ? (
               <EmployeeAvatar
-                name={values.name || "Employee"}
+                name={values.name || "Karyawan"}
                 photoUrl={currentPhotoUrl}
                 className="h-16 w-16 shrink-0 rounded-2xl text-lg"
               />
@@ -260,7 +261,7 @@ export function EmployeeForm({
                 htmlFor="photo"
                 className="mb-1.5 block text-sm font-medium text-slate-700"
               >
-                Photo
+                Foto
               </label>
               <input
                 id="photo"
@@ -294,7 +295,7 @@ export function EmployeeForm({
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
           >
             <ArrowLeft className="h-4 w-4" />
-            Cancel
+            Batal
           </Link>
 
           <button
@@ -302,12 +303,16 @@ export function EmployeeForm({
             disabled={submitting}
             className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Save className="h-4 w-4" />
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             {submitting
-              ? "Saving..."
+              ? "Menyimpan..."
               : mode === "create"
-                ? "Create employee"
-                : "Save changes"}
+                ? "Tambah karyawan"
+                : "Simpan perubahan"}
           </button>
         </div>
       </Form>

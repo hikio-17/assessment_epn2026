@@ -36,7 +36,7 @@ export async function loader({
     const id = parseEmployeeId(params.id);
 
     if (!id) {
-        throw new Response("Employee not found", {
+        throw new Response("Karyawan tidak ditemukan", {
             status: 404,
         });
     }
@@ -50,7 +50,7 @@ export async function loader({
         };
     } catch (error) {
         if (error instanceof NotFoundError) {
-            throw new Response("Employee not found", {
+            throw new Response("Karyawan tidak ditemukan", {
                 status: 404,
             });
         }
@@ -60,7 +60,7 @@ export async function loader({
 }
 
 export function meta() {
-    return [{ title: "Employee detail - PeopleOps" }];
+    return [{ title: "Detail karyawan - PeopleOps" }];
 }
 
 const statusStyles = {
@@ -101,10 +101,10 @@ export default function EmployeeDetailPage() {
             <PageHeader
                 breadcrumbs={[
                     { label: "Workspace", to: "/" },
-                    { label: "Employees", to: "/employees" },
+                    { label: "Karyawan", to: "/employees" },
                     { label: employee.name },
                 ]}
-                title="Employee detail"
+                title="Detail karyawan"
                 description={`${employee.name} · ${employee.position}`}
                 actions={
                     <>
@@ -114,7 +114,7 @@ export default function EmployeeDetailPage() {
                                 className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-500"
                             >
                                 <Pencil className="h-3.5 w-3.5" />
-                                Edit
+                                Ubah
                             </Link>
                         ) : null}
 
@@ -126,8 +126,8 @@ export default function EmployeeDetailPage() {
                             }`}
                         >
                             {canManage
-                                ? "HR / Admin access"
-                                : "Read-only access"}
+                                ? "Akses HR / Admin"
+                                : "Hanya lihat"}
                         </span>
                     </>
                 }
@@ -162,13 +162,13 @@ export default function EmployeeDetailPage() {
 
                     <dl className="mt-6 space-y-3 border-t border-slate-100 pt-5 text-sm">
                         <div className="flex items-center justify-between gap-4">
-                            <dt className="text-slate-500">Employee ID</dt>
+                            <dt className="text-slate-500">ID karyawan</dt>
                             <dd className="font-semibold text-slate-800">
                                 #{employee.id}
                             </dd>
                         </div>
                         <div className="flex items-center justify-between gap-4">
-                            <dt className="text-slate-500">Version</dt>
+                            <dt className="text-slate-500">Versi</dt>
                             <dd className="font-semibold text-slate-800">
                                 {employee.version}
                             </dd>
@@ -179,7 +179,7 @@ export default function EmployeeDetailPage() {
                 <section className="space-y-6">
                     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h2 className="text-sm font-semibold text-slate-900">
-                            Employee information
+                            Informasi karyawan
                         </h2>
 
                         <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -190,12 +190,12 @@ export default function EmployeeDetailPage() {
                             />
                             <InfoRow
                                 icon={Briefcase}
-                                label="Position"
+                                label="Posisi"
                                 value={employee.position}
                             />
                             <InfoRow
                                 icon={Building2}
-                                label="Department"
+                                label="Departemen"
                                 value={
                                     employee.department
                                         ? `${employee.department.code} — ${employee.department.name}`
@@ -204,17 +204,17 @@ export default function EmployeeDetailPage() {
                             />
                             <InfoRow
                                 icon={Wallet}
-                                label="Salary"
+                                label="Gaji"
                                 value={formatRupiah(employee.salary)}
                             />
                             <InfoRow
                                 icon={CalendarDays}
-                                label="Created at"
+                                label="Dibuat"
                                 value={formatDate(employee.createdAt)}
                             />
                             <InfoRow
                                 icon={CalendarDays}
-                                label="Updated at"
+                                label="Diperbarui"
                                 value={formatDate(employee.updatedAt)}
                             />
                         </div>

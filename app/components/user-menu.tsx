@@ -56,7 +56,7 @@ export function UserMenu({ user }: UserMenuProps) {
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Open profile menu"
+        aria-label="Buka menu profil"
         className="grid h-10 w-10 place-items-center rounded-full bg-slate-900 text-sm font-semibold text-white ring-offset-2 transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
       >
         {getInitials(user.name)}
@@ -86,7 +86,7 @@ export function UserMenu({ user }: UserMenuProps) {
                 role="menuitem"
                 className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-rose-50 hover:text-rose-700"
               >
-                Sign out
+                Keluar
               </button>
             </Form>
           </div>

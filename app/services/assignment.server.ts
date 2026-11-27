@@ -76,7 +76,7 @@ async function loadAssignmentDTO(
 
     if (!assignment) {
         throw new NotFoundError(
-            "Assignment tidak ditemukan.",
+            "Penugasan tidak ditemukan.",
         );
     }
 
@@ -102,10 +102,10 @@ function mapAssignmentDbError(
 
     if (isUniqueViolation(error)) {
         return new ConflictError(
-            "Employee sudah memiliki assignment ACTIVE.",
+            "Karyawan sudah memiliki penugasan aktif.",
             {
                 employeeId:
-                    "Employee sudah memiliki assignment ACTIVE.",
+                    "Karyawan sudah memiliki penugasan aktif.",
             },
         );
     }
@@ -116,25 +116,25 @@ function mapAssignmentDbError(
 
         if (constraint?.includes("employee")) {
             return new ValidationError(
-                "Employee tidak ditemukan.",
+                "Karyawan tidak ditemukan.",
                 {
-                    employeeId: "Employee tidak ditemukan.",
+                    employeeId: "Karyawan tidak ditemukan.",
                 },
             );
         }
 
         if (constraint?.includes("department")) {
             return new ValidationError(
-                "Department tidak ditemukan.",
+                "Departemen tidak ditemukan.",
                 {
                     departmentId:
-                        "Department tidak ditemukan.",
+                        "Departemen tidak ditemukan.",
                 },
             );
         }
 
         return new ValidationError(
-            "Relasi assignment tidak valid.",
+            "Relasi penugasan tidak valid.",
         );
     }
 
@@ -156,19 +156,19 @@ async function validateEmployeeDepartment(
 
     if (!employee) {
         throw new ValidationError(
-            "Employee tidak ditemukan.",
+            "Karyawan tidak ditemukan.",
             {
-                employeeId: "Employee tidak ditemukan.",
+                employeeId: "Karyawan tidak ditemukan.",
             },
         );
     }
 
     if (employee.departmentId !== departmentId) {
         throw new ValidationError(
-            "Employee bukan anggota department yang dipilih.",
+            "Karyawan bukan anggota departemen yang dipilih.",
             {
                 employeeId:
-                    "Employee bukan anggota department yang dipilih.",
+                    "Karyawan bukan anggota departemen yang dipilih.",
             },
         );
     }
@@ -214,7 +214,7 @@ export async function getAssignmentById(
 
     if (!assignment) {
         throw new NotFoundError(
-            "Assignment tidak ditemukan.",
+            "Penugasan tidak ditemukan.",
         );
     }
 
@@ -251,10 +251,10 @@ export async function createAssignment(
 
                         if (active) {
                             throw new ConflictError(
-                                "Employee sudah memiliki assignment ACTIVE.",
+                                "Karyawan sudah memiliki penugasan aktif.",
                                 {
                                     employeeId:
-                                        "Employee sudah memiliki assignment ACTIVE.",
+                                        "Karyawan sudah memiliki penugasan aktif.",
                                 },
                             );
                         }
@@ -311,7 +311,7 @@ export async function updateAssignment(
 
                     if (!current) {
                         throw new NotFoundError(
-                            "Assignment tidak ditemukan.",
+                            "Penugasan tidak ditemukan.",
                         );
                     }
 
@@ -346,10 +346,10 @@ export async function updateAssignment(
 
                         if (active && active.id !== id) {
                             throw new ConflictError(
-                                "Employee sudah memiliki assignment ACTIVE.",
+                                "Karyawan sudah memiliki penugasan aktif.",
                                 {
                                     employeeId:
-                                        "Employee sudah memiliki assignment ACTIVE.",
+                                        "Karyawan sudah memiliki penugasan aktif.",
                                 },
                             );
                         }
@@ -399,7 +399,7 @@ export async function deleteAssignment(
 
                     if (!assignment) {
                         throw new NotFoundError(
-                            "Assignment tidak ditemukan.",
+                            "Penugasan tidak ditemukan.",
                         );
                     }
 

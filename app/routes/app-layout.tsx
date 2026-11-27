@@ -11,9 +11,11 @@ import {
   NotebookPen,
   ShieldCheck,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 
 import type { Route } from "./+types/app-layout";
+import { TopLoadingBar } from "~/components/top-loading-bar";
 import { UserMenu } from "~/components/user-menu";
 import { requireAuthenticatedUser } from "~/authorization.server";
 import { requireAuthMiddleware } from "~/middleware/auth.server";
@@ -28,36 +30,49 @@ export async function loader({
   };
 }
 
-const navItems = [
+type NavItem = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+};
+
+const operationalItems: NavItem[] = [
   {
     to: "/",
-    label: "Dashboard",
+    label: "Dasbor",
     icon: LayoutDashboard,
     end: true,
   },
   {
     to: "/employees",
-    label: "Employees",
+    label: "Karyawan",
     icon: Users,
   },
   {
     to: "/assignments",
-    label: "Assignments",
+    label: "Penugasan",
     icon: ClipboardList,
   },
   {
     to: "/drafts",
-    label: "Drafts",
+    label: "Draf",
     icon: NotebookPen,
   },
+];
+
+const reportItems: NavItem[] = [
   {
     to: "/reports",
-    label: "Reports",
+    label: "Karyawan & payroll",
     icon: FileText,
   },
+];
+
+const systemItems: NavItem[] = [
   {
-    to: "/lab/parallel",
-    label: "API Lab",
+    to: "/concurrency",
+    label: "Concurrency API",
     icon: Activity,
   },
 ];
@@ -65,6 +80,34 @@ const navItems = [
 export default function AppLayout() {
   const { user } = useLoaderData<typeof loader>();
   const isAdmin = user.role === "ADMIN";
+
+  const navGroups = [
+    {
+      label: "Operasional",
+      items: operationalItems,
+    },
+    {
+      label: "Laporan",
+      items: reportItems,
+    },
+    {
+      label: "Sistem",
+      items: isAdmin
+        ? [
+            ...systemItems,
+            {
+              to: "/admin/users",
+              label: "Pengguna",
+              icon: ShieldCheck,
+            },
+          ]
+        : systemItems,
+    },
+  ];
+
+  const mobileItems = navGroups.flatMap(
+    (group) => group.items,
+  );
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -76,45 +119,41 @@ export default function AppLayout() {
           <div>
             <p className="font-semibold">PeopleOps</p>
             <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-              HR workspace
+              HR Workspace
             </p>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 p-4">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`
-              }
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </NavLink>
-          ))}
+        <nav className="flex-1 space-y-6 overflow-y-auto p-4">
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              <p className="px-4 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                {group.label}
+              </p>
 
-          {isAdmin ? (
-            <NavLink
-              to="/admin/users"
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`
-              }
-            >
-              <ShieldCheck className="h-4 w-4" />
-              Admin users
-            </NavLink>
-          ) : null}
+              <div className="space-y-1">
+                {group.items.map(
+                  ({ to, label, icon: Icon, end }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={end}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                          isActive
+                            ? "bg-indigo-50 text-indigo-700"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        }`
+                      }
+                    >
+                      <Icon className="h-4 w-4" />
+                      {label}
+                    </NavLink>
+                  ),
+                )}
+              </div>
+            </div>
+          ))}
         </nav>
       </aside>
 
@@ -136,7 +175,7 @@ export default function AppLayout() {
           </div>
 
           <nav className="flex gap-1 overflow-x-auto px-4 pb-3 lg:hidden">
-            {navItems.map(({ to, label, end }) => (
+            {mobileItems.map(({ to, label, end }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -152,22 +191,9 @@ export default function AppLayout() {
                 {label}
               </NavLink>
             ))}
-
-            {isAdmin ? (
-              <NavLink
-                to="/admin/users"
-                className={({ isActive }) =>
-                  `whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold ${
-                    isActive
-                      ? "bg-indigo-50 text-indigo-700"
-                      : "text-slate-500"
-                  }`
-                }
-              >
-                Admin
-              </NavLink>
-            ) : null}
           </nav>
+
+          <TopLoadingBar />
         </header>
 
         <main className="mx-auto px-5 py-8 sm:px-8">

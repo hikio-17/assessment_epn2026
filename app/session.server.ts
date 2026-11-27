@@ -42,10 +42,15 @@ export async function getSession(
   return getStorage().getSession(cookieHeader);
 }
 
+type CommitSessionOptions = Parameters<
+  SessionStorage<AuthSessionData>["commitSession"]
+>[1];
+
 export async function commitSession(
   session: Session<AuthSessionData>,
+  options?: CommitSessionOptions,
 ) {
-  return getStorage().commitSession(session);
+  return getStorage().commitSession(session, options);
 }
 
 export async function destroySession(

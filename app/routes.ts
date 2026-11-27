@@ -46,6 +46,6 @@ export default [
     ]),
     route("assignments", "routes/assignments.tsx"),
     route("drafts", "routes/drafts.tsx"),
-    route("lab/parallel", "routes/parallel-fetch.tsx"),
+    route("concurrency", "routes/parallel-fetch.tsx"),
   ]),
 ] satisfies RouteConfig;

@@ -37,7 +37,7 @@ function parseId(value: string | undefined): number {
 
   if (!parsed.success) {
     throw new ValidationError(
-      "Assignment ID tidak valid.",
+      "ID penugasan tidak valid.",
     );
   }
 
@@ -76,7 +76,7 @@ export async function action({
 
       return apiSuccess(
         null,
-        "Assignment berhasil dihapus.",
+        "Penugasan berhasil dihapus.",
       );
     }
 
@@ -109,7 +109,7 @@ export async function action({
 
     return apiSuccess(
       assignment,
-      "Assignment berhasil diperbarui.",
+      "Penugasan berhasil diperbarui.",
     );
   } catch (error) {
     return apiError(error);

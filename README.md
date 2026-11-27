@@ -1,8 +1,20 @@
 # PeopleOps
 
-Aplikasi HR untuk mengelola employee, department, assignment, upload foto, dan report. Dibangun dengan React Router 8 framework mode, TypeORM, dan PostgreSQL.
+Aplikasi HR internal untuk mengelola data karyawan, departemen, penugasan, dan laporan. Dibangun dengan React Router 8, TypeORM, dan PostgreSQL.
 
-Fokus project ini ada di alur server-side React Router, validasi, session, RBAC, dan penanganan concurrency yang benar. Semua data utama diambil lewat loader atau action, bukan fetch di `useEffect`.
+Data utama diambil di server melalui `loader`, sedangkan mutasi data diproses melalui `action`.
+
+## Fitur
+
+- Login, sesi, dan kontrol akses berdasarkan peran `ADMIN`, `HR`, dan `VIEWER`.
+- Sesi berlaku 8 jam, atau 30 hari jika **Ingat saya** dicentang.
+- CRUD karyawan dengan upload foto, pencarian, filter departemen, dan pagination.
+- Modul penugasan dengan dropdown departemen → karyawan, loading bar, toast, dan pengamanan konkurensi di database.
+- Halaman admin untuk menambah pengguna. Tidak ada registrasi publik.
+- Draft karyawan di localStorage menggunakan `clientLoader` dan `clientAction`.
+- Laporan headcount dan payroll dengan layout terpisah, mode cetak, dan ekspor CSV.
+- Halaman uji konkurensi lima API.
+- Loading bar global di bawah topbar.
 
 ## Stack
 
@@ -12,13 +24,14 @@ Fokus project ini ada di alur server-side React Router, validasi, session, RBAC,
 - Tailwind CSS 4
 - Zod
 - Vitest + jsdom
+- react-top-loading-bar
 
 ## Menjalankan
 
 Butuh Node 22.22 atau lebih baru, Yarn 1.22, dan Docker.
 
 ```bash
-cd /home/hikio/workplaces/projects/asessment_epn1/assessment
+cd assessment
 
 cp .env.example .env
 yarn install
@@ -30,60 +43,70 @@ yarn dev
 
 Aplikasi tersedia di `http://localhost:5173`.
 
+Untuk menjalankan hasil build:
+
+```bash
+yarn build
+yarn start
+```
+
 ## Akun demo
 
-| Email | Password | Role |
+| Email | Password | Peran |
 | --- | --- | --- |
 | admin@peopleops.test | Password123! | ADMIN |
 | hr@peopleops.test | Password123! | HR |
 | viewer@peopleops.test | Password123! | VIEWER |
 
-ADMIN dan HR bisa create, update, dan delete. VIEWER hanya bisa membaca.
+`ADMIN` dan `HR` dapat mengelola karyawan dan penugasan. `VIEWER` hanya dapat membaca. Halaman pengguna hanya dapat diakses `ADMIN`.
 
-## Route utama
+## Route
 
 | Route | Keterangan |
 | --- | --- |
-| `/login`, `/logout` | Login dan session |
-| `/` | Dashboard |
-| `/employees` | List, detail, create, edit, delete employee |
-| `/employees/new` | Form employee + upload foto |
-| `/employees/:id/edit` | Edit employee |
-| `/assignments` | Advanced module dengan `useFetch`, dependent dropdown, dan toast |
-| `/drafts` | Draft employee di localStorage |
-| `/reports` | Report dengan layout terpisah |
-| `/reports/export` | Export CSV, khusus ADMIN/HR |
-| `/lab/parallel` | Demo 5 API paralel |
-| `/admin/users` | Module khusus ADMIN |
+| `/login`, `/logout` | Login dan sesi |
+| `/` | Dasbor |
+| `/employees` | Daftar karyawan, pencarian, dan filter |
+| `/employees/new` | Form karyawan dan upload foto |
+| `/employees/:id` | Detail karyawan |
+| `/employees/:id/edit` | Edit karyawan |
+| `/assignments` | Modul penugasan |
+| `/drafts` | Draft karyawan di localStorage |
+| `/reports` | Laporan headcount dan payroll |
+| `/reports/export` | Ekspor CSV, khusus `ADMIN` dan `HR` |
+| `/concurrency` | Uji konkurensi lima API |
+| `/admin/users` | Daftar dan tambah pengguna, khusus `ADMIN` |
 
-## Catatan implementasi
+## Arsitektur
 
-- Semua halaman utama memakai `useLoaderData` dan form CRUD memakai `useActionData` serta komponen `Form`.
-- Create/edit employee dan create/edit assignment dibuka sebagai modal. Route employee create/edit tetap tersedia sebagai fallback direct URL.
-- Layout memakai root layout, app layout, employees layout, dan layout report terpisah.
-- Middleware berjalan di root, layout, dan route. Auth dicek ulang di loader/action sebagai lapisan kedua.
-- Upload foto dibatasi 2MB dan extension/MIME tertentu. File ditulis di dalam transaksi; kalau insert database gagal, file dihapus. Kalau upload gagal, transaksi rollback.
-- Assignment memakai transaksi serializable, pessimistic row lock, partial unique index satu assignment aktif per employee, version untuk update, dan retry saat serialization failure.
-- Report punya header dan sidebar sendiri, plus mode print dan export CSV.
-- Halaman parallel memakai `Promise.all` di server loader. Bukti durasi parallel dibandingkan dengan estimasi sequential ditampilkan langsung di halaman.
-- Module assignment memakai custom `useFetch` karena kebutuhan client-side interaction. Core CRUD tetap server-side. Form di halaman assignment tetap memakai komponen `Form` React Router, tetapi submit-nya dicegat dan diproses lewat `useFetch`.
-- Satu-satunya `useEffect` ada di `app/hooks/use-fetch.ts`. Itu konsekuensi dari kebutuhan advanced module yang meminta client `useFetch`; halaman CRUD utama tidak memakai client fetch.
-- Toast disimpan di external store dan di-dedupe berdasarkan ID operasi. Submit dikunci agar tidak mengirim request ganda.
-- Draft employee memakai `clientLoader` dan `clientAction` dengan localStorage. Data draft tidak masuk database.
+- Halaman utama memakai `useLoaderData`; form CRUD memakai `Form`, `useActionData`, dan validasi Zod.
+- Layout terdiri dari root layout, app layout, employees layout, dan layout laporan terpisah.
+- Middleware auth dan RBAC berjalan di root, layout, dan route. Pengecekan akses juga dilakukan di `loader` dan `action`.
+- Upload foto dibatasi 2MB dengan tipe JPG, JPEG, PNG, atau WebP. File disimpan di dalam transaksi; jika insert database gagal, file dihapus. Jika upload gagal, transaksi dibatalkan.
+- Penugasan memakai transaksi `SERIALIZABLE`, pessimistic row lock, partial unique index untuk satu penugasan aktif per karyawan, optimistic version, dan retry saat serialization failure.
+- Modul penugasan memakai custom `useFetch` untuk interaksi form dan dependent dropdown. Submit dikunci agar tidak mengirim request ganda, dan toast di-dedupe berdasarkan ID operasi.
+- Laporan memiliki header dan sidebar sendiri, mendukung mode cetak, dan ekspor CSV untuk `ADMIN` dan `HR`.
+- Halaman `/concurrency` mengambil lima API dengan `Promise.all` di server loader, lalu membandingkan waktu paralel dengan total delay berurutan.
+- Draft karyawan memakai `clientLoader` dan `clientAction` dengan localStorage. Data draft tidak masuk database.
+- Loading bar global dipasang di layout utama dan layout laporan, serta terhubung ke navigasi dan proses `useFetch`.
+- Pengguna baru dibuat dari halaman admin. Password di-hash dengan bcrypt dan email harus unik.
 
-## File yang perlu dilihat saat review
+## Bagian penting
 
 | Bagian | Lokasi |
 | --- | --- |
-| Loader/action, Form, feedback | `app/routes/employees-*` |
-| Session dan login | `app/session.server.ts`, `app/routes/login.tsx` |
-| Middleware auth/RBAC | `app/middleware/auth.server.ts` |
+| CRUD karyawan | `app/routes/employees-*` |
+| Validasi dan form | `app/lib/validation.ts`, `app/lib/employee-form.ts`, `app/components/employee-form.tsx` |
+| Sesi dan login | `app/session.server.ts`, `app/routes/login.tsx` |
+| Middleware auth dan RBAC | `app/middleware/auth.server.ts` |
 | Upload dan rollback | `app/services/upload.server.ts`, `app/services/employee.server.ts` |
-| Concurrency assignment | `app/services/assignment.server.ts`, `app/db/entities/assignment.entity.ts` |
-| Report dan CSV | `app/routes/report-*`, `app/routes/reports-layout.tsx`, `app/services/report.server.ts` |
-| Parallel API | `app/lib/parallel-demo.server.ts`, `app/routes/parallel-fetch.tsx` |
-| useFetch dan toast | `app/hooks/use-fetch.ts`, `app/lib/toast-store.ts` |
-| clientLoader/clientAction | `app/routes/drafts.tsx`, `app/lib/draft-cache.ts` |
+| Konkurensi penugasan | `app/services/assignment.server.ts`, `app/db/entities/assignment.entity.ts` |
+| Laporan dan CSV | `app/routes/report-*`, `app/routes/reports-layout.tsx`, `app/services/report.server.ts` |
+| Konkurensi API | `app/lib/parallel-demo.server.ts`, `app/routes/parallel-fetch.tsx` |
+| `useFetch` dan toast | `app/hooks/use-fetch.ts`, `app/lib/toast-store.ts` |
+| Draft localStorage | `app/routes/drafts.tsx`, `app/lib/draft-cache.ts` |
+| Pengguna admin | `app/services/user.server.ts`, `app/routes/admin-users.tsx` |
+| Loading bar | `app/components/top-loading-bar.tsx`, `app/lib/page-loading.ts` |
 | Test | `tests/unit`, `tests/integration` |
 
 ## Test
@@ -92,26 +115,21 @@ ADMIN dan HR bisa create, update, dan delete. VIEWER hanya bisa membaca.
 yarn test
 ```
 
-Perintah di atas menyalakan container database, membuat database `assessment_test` bila belum ada, menyiapkan schema, lalu menjalankan seluruh test.
+Perintah tersebut menyalakan container database, membuat database `assessment_test` bila belum ada, menyiapkan schema, lalu menjalankan seluruh test.
 
 Hasil terakhir:
 
 ```text
-Test Files  15 passed
-Tests       82 passed
+Test Files  16 passed
+Tests       93 passed
 ```
 
-Test mencakup:
+Cakupan test:
 
-- validasi Zod: input kosong, format salah, duplicate
-- unit test untuk upload, CSV, toast store, parallel demo, retry, authorization, draft cache
-- integration route/API create, read, update, delete
-- login, session, middleware, RBAC page dan API
-- upload rollback dan pembersihan file
-- race condition assignment: 3 create bersamaan menghasilkan 1 sukses dan 2 conflict
-- update dengan version stale menghasilkan 409
-- report aggregation dan export CSV
-- clientLoader/clientAction dengan localStorage
+- Unit test untuk validasi Zod, upload, CSV, toast store, concurrent request runner, retry, authorization, dan draft cache.
+- Integration test untuk CRUD karyawan, penugasan, laporan, pengguna admin, serta route API.
+- Test login, remember me, sesi, middleware, dan RBAC halaman maupun API.
+- Test race condition penugasan, update dengan version stale, upload rollback, dan `clientLoader`/`clientAction`.
 
 Perintah lain:
 
@@ -122,11 +140,11 @@ yarn test:unit
 yarn test:coverage
 ```
 
-## Struktur singkat
+## Struktur project
 
 ```text
 app/
-├─ components/       UI, form, loading bar, toast
+├─ components/       UI, form, dialog, loading bar, toast
 ├─ db/entities/      EntitySchema TypeORM
 ├─ hooks/            useFetch
 ├─ lib/              validasi, error, cache, CSV, helper
@@ -144,11 +162,12 @@ tests/                unit dan integration test
 
 ## Catatan produksi
 
-- `synchronize()` hanya dipakai oleh seed dan setup test. Untuk produksi sebaiknya tambahkan migration TypeORM.
-- File upload masih disimpan di disk lokal (`uploads/`). Kalau akan deploy multi-instance, pindahkan ke object storage dan sesuaikan lifecycle cleanup-nya.
-- Halaman `/lab/parallel` bergantung pada JSONPlaceholder. Kalau jaringan eksternal bermasalah, halaman tetap bisa dibuka tetapi kartu API akan menampilkan error.
+- `synchronize()` hanya dipakai oleh seed dan setup test. Untuk produksi, tambahkan migration TypeORM.
+- File upload masih disimpan di disk lokal (`uploads/`). Untuk deployment multi-instance, pindahkan ke object storage dan sesuaikan lifecycle cleanup-nya.
+- Halaman `/concurrency` bergantung pada JSONPlaceholder. Jika jaringan eksternal bermasalah, halaman tetap dapat dibuka tetapi kartu API akan menampilkan error.
 - Ganti `SESSION_SECRET` sebelum deploy. Set `COOKIE_SECURE=true` jika aplikasi berjalan di HTTPS.
 - Akun demo hanya untuk local development.
+- Belum ada fitur reset password dan verifikasi email.
 
 ## Environment
 
@@ -160,4 +179,4 @@ UPLOAD_DIR=./uploads
 COOKIE_SECURE=false
 ```
 
-Database berjalan di port `5432` dengan kredensial development `assessment` / `assessment`.
+Database development berjalan di port `5432` dengan kredensial `assessment` / `assessment`.

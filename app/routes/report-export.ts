@@ -31,13 +31,13 @@ export async function loader({
 
   const rows: Array<Array<string | number>> = [
     [
-      "Department Code",
-      "Department",
-      "Headcount",
-      "Active",
-      "Inactive",
+      "Kode Departemen",
+      "Departemen",
+      "Jumlah Karyawan",
+      "Aktif",
+      "Nonaktif",
       "Payroll",
-      "Payroll Share (%)",
+      "Porsi Payroll (%)",
     ],
     ...report.departments.map((department) => [
       department.code,
@@ -65,7 +65,7 @@ export async function loader({
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="peopleops-headcount-${date}.csv"`,
+      "Content-Disposition": `attachment; filename="laporan-karyawan-${date}.csv"`,
       "Cache-Control": "no-store",
     },
   });

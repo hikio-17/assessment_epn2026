@@ -50,7 +50,7 @@ export async function loader({
   const id = parseEmployeeId(params.id);
 
   if (!id) {
-    throw new Response("Employee not found", {
+    throw new Response("Karyawan tidak ditemukan", {
       status: 404,
     });
   }
@@ -68,7 +68,7 @@ export async function loader({
     };
   } catch (error) {
     if (error instanceof NotFoundError) {
-      throw new Response("Employee not found", {
+      throw new Response("Karyawan tidak ditemukan", {
         status: 404,
       });
     }
@@ -88,7 +88,7 @@ export async function action({
 
   if (!id) {
     return employeeActionError(
-      new ValidationError("Employee ID tidak valid."),
+      new ValidationError("ID karyawan tidak valid."),
       "update",
     );
   }
@@ -118,7 +118,7 @@ export async function action({
     );
 
     return employeeActionSuccess(
-      "Employee berhasil diperbarui.",
+      "Karyawan berhasil diperbarui.",
       employee,
       parsed.values,
       "update",
@@ -129,7 +129,7 @@ export async function action({
 }
 
 export function meta() {
-  return [{ title: "Edit employee - PeopleOps" }];
+  return [{ title: "Ubah karyawan - PeopleOps" }];
 }
 
 export default function EmployeeEditPage() {
@@ -149,15 +149,15 @@ export default function EmployeeEditPage() {
       <PageHeader
         breadcrumbs={[
           { label: "Workspace", to: "/" },
-          { label: "Employees", to: "/employees" },
+          { label: "Karyawan", to: "/employees" },
           {
             label: employee.name,
             to: `/employees/${employee.id}`,
           },
-          { label: "Edit" },
+          { label: "Ubah" },
         ]}
-        title="Edit employee"
-        description="Update data employee, ganti foto, atau hapus foto yang ada."
+        title="Ubah karyawan"
+        description="Perbarui data karyawan, ganti foto, atau hapus foto yang ada."
       />
 
       <EmployeeForm

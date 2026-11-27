@@ -23,7 +23,7 @@ export async function loader({
 }
 
 export function meta() {
-  return [{ title: "Parallel API Lab - PeopleOps" }];
+  return [{ title: "Concurrency API - PeopleOps" }];
 }
 
 function formatSeconds(ms: number): string {
@@ -44,32 +44,32 @@ export default function ParallelFetchPage() {
   const running = revalidator.state === "loading";
 
   const comparisonMax = Math.max(
-    data.sequentialDurationMs,
+    data.configuredSequentialMs,
     data.totalDurationMs,
     1,
   );
 
   const metrics = [
     {
-      label: "Parallel total",
+      label: "Total paralel",
       value: formatSeconds(data.totalDurationMs),
-      hint: "Waktu yang benar-benar dirasakan",
+      hint: "Waktu aktual semua request",
       icon: Timer,
     },
     {
-      label: "Sequential estimate",
-      value: formatSeconds(data.sequentialDurationMs),
-      hint: "Jika kelima API dijalankan berurutan",
+      label: "Jika berurutan",
+      value: formatSeconds(data.configuredSequentialMs),
+      hint: "Jumlah delay tiap API",
       icon: Activity,
     },
     {
-      label: "Time saved",
+      label: "Waktu dihemat",
       value: formatSeconds(data.savedMs),
-      hint: "Selisih sequential vs parallel",
+      hint: "Selisih berurutan vs paralel",
       icon: Zap,
     },
     {
-      label: "Records loaded",
+      label: "Data dimuat",
       value: data.totalRecords.toLocaleString("id-ID"),
       hint: "5 API × 100 data",
       icon: Activity,
@@ -81,10 +81,10 @@ export default function ParallelFetchPage() {
       <PageHeader
         breadcrumbs={[
           { label: "Workspace", to: "/" },
-          { label: "API Lab" },
+          { label: "Concurrency API" },
         ]}
-        title="5 APIs. One wait."
-        description="Kelima request dijalankan dengan Promise.all di server loader. Total waktu harus mendekati API paling lambat, bukan jumlah semua delay."
+        title="Concurrency API"
+        description="Lima API dimuat bersamaan. Total waktu mengikuti request paling lambat, bukan jumlah seluruh request."
         actions={
           <button
             type="button"
@@ -97,7 +97,7 @@ export default function ParallelFetchPage() {
                 running ? "animate-spin" : ""
               }`}
             />
-            {running ? "Running..." : "Run again"}
+            {running ? "Memuat..." : "Muat ulang"}
           </button>
         }
       />
@@ -126,17 +126,17 @@ export default function ParallelFetchPage() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">
-              Sequential vs parallel
+              Paralel vs berurutan
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Batang merah adalah estimasi jika request
-              dijalankan satu per satu. Batang indigo adalah
-              hasil aktual.
+            <p className="mt-1 max-w-2xl text-sm text-slate-500">
+              Jika dijalankan satu per satu, total waktu adalah
+              jumlah semua delay. Secara paralel, totalnya
+              mendekati request paling lambat.
             </p>
           </div>
           <p className="text-xs text-slate-400">
-            Sum of individual durations:{" "}
-            {formatSeconds(data.sequentialDurationMs)}
+            Target paralel:{" "}
+            {formatSeconds(data.configuredParallelMs)}
           </p>
         </div>
 
@@ -144,10 +144,10 @@ export default function ParallelFetchPage() {
           <div>
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-rose-600">
-                Sequential estimate
+                Jika berurutan
               </span>
               <span className="font-medium text-slate-600">
-                {formatSeconds(data.sequentialDurationMs)}
+                {formatSeconds(data.configuredSequentialMs)}
               </span>
             </div>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-100">
@@ -155,7 +155,7 @@ export default function ParallelFetchPage() {
                 className="h-full rounded-full bg-rose-400"
                 style={{
                   width: `${
-                    (data.sequentialDurationMs /
+                    (data.configuredSequentialMs /
                       comparisonMax) *
                     100
                   }%`,
@@ -167,7 +167,7 @@ export default function ParallelFetchPage() {
           <div>
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-indigo-700">
-                Parallel actual
+                Paralel aktual
               </span>
               <span className="font-medium text-slate-600">
                 {formatSeconds(data.totalDurationMs)}
@@ -178,8 +178,7 @@ export default function ParallelFetchPage() {
                 className="h-full rounded-full bg-indigo-500"
                 style={{
                   width: `${
-                    (data.totalDurationMs /
-                      comparisonMax) *
+                    (data.totalDurationMs / comparisonMax) *
                     100
                   }%`,
                 }}
@@ -201,7 +200,7 @@ export default function ParallelFetchPage() {
                   {result.label}
                 </p>
                 <p className="mt-1 text-sm text-slate-500">
-                  Delay +{result.delayMs}ms
+                  Delay {formatSeconds(result.delayMs)}
                 </p>
               </div>
 
@@ -212,7 +211,7 @@ export default function ParallelFetchPage() {
                     : "bg-rose-50 text-rose-700"
                 }`}
               >
-                {result.ok ? `${result.status} OK` : "ERROR"}
+                {result.ok ? `${result.status} OK` : "GAGAL"}
               </span>
             </div>
 
@@ -222,7 +221,7 @@ export default function ParallelFetchPage() {
                   {formatSeconds(result.durationMs)}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
-                  {result.count} records
+                  {result.count} data
                 </p>
               </div>
 
@@ -247,15 +246,7 @@ export default function ParallelFetchPage() {
               </div>
             </div>
 
-            {result.ok ? (
-              <ul className="mt-4 space-y-1 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                {result.sample.map((item) => (
-                  <li key={item} className="truncate">
-                    • {item}
-                  </li>
-                ))}
-              </ul>
-            ) : (
+            {result.ok ? null : (
               <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700">
                 {result.error}
               </p>
@@ -265,10 +256,9 @@ export default function ParallelFetchPage() {
       </section>
 
       <p className="rounded-2xl border border-dashed border-slate-300 bg-white/60 px-5 py-4 text-xs leading-5 text-slate-500">
-        Data berasal dari JSONPlaceholder. Jika jaringan eksternal
-        sedang bermasalah, kartu API akan menampilkan error, tetapi
-        pengukuran parallel tetap berjalan dan halaman tidak
-        melakukan fetch dari client.
+        Data berasal dari JSONPlaceholder, 100 data per API.
+        Pengambilan data dilakukan di server melalui loader. Jika
+        salah satu sumber gagal, API lain tetap ditampilkan.
       </p>
     </div>
   );

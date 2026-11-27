@@ -7,6 +7,7 @@ import {
   employeeInputSchema,
   loginSchema,
   toFieldErrors,
+  userCreateFormSchema,
 } from "~/lib/validation";
 
 describe("validation schemas", () => {
@@ -37,6 +38,69 @@ describe("validation schemas", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.email).toBe("admin@test.local");
+    }
+  });
+
+  it("rejects empty user fields", () => {
+    const result = userCreateFormSchema.safeParse({
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      role: "VIEWER",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const errors = toFieldErrors(result.error);
+      expect(errors.name).toBeDefined();
+      expect(errors.email).toBeDefined();
+      expect(errors.password).toBeDefined();
+      expect(errors.confirmPassword).toBeDefined();
+    }
+  });
+
+  it("rejects mismatched password confirmation", () => {
+    const result = userCreateFormSchema.safeParse({
+      name: "Nadia Putri",
+      email: "nadia@test.local",
+      password: "Password123!",
+      confirmPassword: "Password456!",
+      role: "HR",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        toFieldErrors(result.error).confirmPassword,
+      ).toBe("Konfirmasi kata sandi tidak sama.");
+    }
+  });
+
+  it("rejects short user passwords", () => {
+    const result = userCreateFormSchema.safeParse({
+      name: "Nadia Putri",
+      email: "nadia@test.local",
+      password: "short",
+      confirmPassword: "short",
+      role: "HR",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid user input and lowercases email", () => {
+    const result = userCreateFormSchema.safeParse({
+      name: "Nadia Putri",
+      email: " NADIA@Test.Local ",
+      password: "Password123!",
+      confirmPassword: "Password123!",
+      role: "HR",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.email).toBe("nadia@test.local");
     }
   });
 

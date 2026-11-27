@@ -1,9 +1,7 @@
-import { useLoaderData } from "react-router";
 import {
-  Building2,
-  ClipboardList,
-  Users,
-} from "lucide-react";
+  Link,
+  useLoaderData,
+} from "react-router";
 
 import type { Route } from "./+types/dashboard";
 import { PageHeader } from "~/components/page-header";
@@ -20,23 +18,62 @@ export async function loader({
   context,
 }: Route.LoaderArgs) {
   const user = requireAuthenticatedUser(context);
-
   const dataSource = await getInitializedDataSource();
 
-  const [employees, departments, assignments] =
-    await Promise.all([
-      dataSource.getRepository(EmployeeEntity).count(),
-      dataSource.getRepository(DepartmentEntity).count(),
-      dataSource.getRepository(AssignmentEntity).count(),
-    ]);
+  const employeeRepository =
+    dataSource.getRepository(EmployeeEntity);
+  const departmentRepository =
+    dataSource.getRepository(DepartmentEntity);
+  const assignmentRepository =
+    dataSource.getRepository(AssignmentEntity);
+
+  const [
+    employees,
+    departments,
+    activeAssignments,
+    recentEmployees,
+    latestAssignments,
+  ] = await Promise.all([
+    employeeRepository.count(),
+    departmentRepository.count(),
+    assignmentRepository.countBy({
+      status: "ACTIVE",
+    }),
+    employeeRepository.find({
+      order: { createdAt: "DESC" },
+      take: 5,
+      relations: { department: true },
+    }),
+    assignmentRepository.find({
+      where: { status: "ACTIVE" },
+      order: { updatedAt: "DESC" },
+      take: 5,
+      relations: {
+        department: true,
+        employee: true,
+      },
+    }),
+  ]);
 
   return {
     user,
     stats: {
       employees,
       departments,
-      assignments,
+      activeAssignments,
     },
+    recentEmployees: recentEmployees.map((employee) => ({
+      id: employee.id,
+      name: employee.name,
+      position: employee.position,
+      department: employee.department?.name ?? "—",
+    })),
+    latestAssignments: latestAssignments.map((assignment) => ({
+      id: assignment.id,
+      title: assignment.title,
+      employee: assignment.employee?.name ?? "—",
+      department: assignment.department?.name ?? "—",
+    })),
     today: new Intl.DateTimeFormat("id-ID", {
       dateStyle: "full",
     }).format(new Date()),
@@ -44,98 +81,143 @@ export async function loader({
 }
 
 export function meta() {
-  return [{ title: "Dashboard - PeopleOps" }];
+  return [{ title: "Dasbor - PeopleOps" }];
 }
 
 export default function DashboardPage() {
-  const { user, stats, today } = useLoaderData<typeof loader>();
+  const {
+    user,
+    stats,
+    recentEmployees,
+    latestAssignments,
+    today,
+  } = useLoaderData<typeof loader>();
 
   const cards = [
     {
-      label: "Employees",
+      label: "Karyawan",
       value: stats.employees,
-      icon: Users,
-      tone: "bg-indigo-50 text-indigo-700",
+      to: "/employees",
     },
     {
-      label: "Departments",
+      label: "Departemen",
       value: stats.departments,
-      icon: Building2,
-      tone: "bg-emerald-50 text-emerald-700",
+      to: "/reports",
     },
     {
-      label: "Assignments",
-      value: stats.assignments,
-      icon: ClipboardList,
-      tone: "bg-amber-50 text-amber-700",
+      label: "Penugasan aktif",
+      value: stats.activeAssignments,
+      to: "/assignments",
     },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         breadcrumbs={[
           { label: "Workspace", to: "/" },
-          { label: "Dashboard" },
+          { label: "Dasbor" },
         ]}
-        title={`Welcome back, ${user.name}`}
+        title={`Halo, ${user.name}`}
         description={`${today} · ${ROLE_LABELS[user.role]}`}
-        actions={
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-            Session active
-          </span>
-        }
       />
 
       <section className="grid gap-4 sm:grid-cols-3">
-        {cards.map(({ label, value, icon: Icon, tone }) => (
-          <div
+        {cards.map(({ label, value, to }) => (
+          <Link
             key={label}
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+            to={to}
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-200"
           >
-            <div
-              className={`grid h-11 w-11 place-items-center rounded-2xl ${tone}`}
-            >
-              <Icon className="h-5 w-5" />
-            </div>
-            <p className="mt-5 text-sm font-medium text-slate-500">
+            <p className="text-sm font-medium text-slate-500">
               {label}
             </p>
-            <p className="mt-1 text-3xl font-bold tracking-tight">
+            <p className="mt-2 text-3xl font-semibold tracking-tight">
               {value.toLocaleString("id-ID")}
             </p>
-          </div>
+          </Link>
         ))}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.4fr_0.6fr]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-            Next module
-          </p>
-          <h2 className="mt-3 text-xl font-semibold">
-            Employee CRUD with server-side loaders
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
-            Tahap berikutnya menambahkan list, create, detail,
-            edit, delete, upload foto, dan feedback lewat
-            <code className="mx-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">
-              useActionData
-            </code>
-            .
-          </p>
+      <section className="grid gap-5 lg:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <h2 className="text-sm font-semibold">
+              Karyawan terbaru
+            </h2>
+            <Link
+              to="/employees"
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-500"
+            >
+              Lihat semua
+            </Link>
+          </div>
+
+          {recentEmployees.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-slate-500">
+              Belum ada data karyawan.
+            </p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {recentEmployees.map((employee) => (
+                <li key={employee.id}>
+                  <Link
+                    to={`/employees/${employee.id}`}
+                    className="flex items-center justify-between gap-4 px-5 py-3.5 transition hover:bg-slate-50"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {employee.name}
+                      </p>
+                      <p className="truncate text-xs text-slate-500">
+                        {employee.position} · {employee.department}
+                      </p>
+                    </div>
+                    <span className="text-xs text-slate-400">
+                      Lihat
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-slate-900 p-6 text-white shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-            Current account
-          </p>
-          <p className="mt-3 truncate text-lg font-semibold">
-            {user.email}
-          </p>
-          <p className="mt-1 text-sm text-slate-400">
-            Role: {ROLE_LABELS[user.role]}
-          </p>
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <h2 className="text-sm font-semibold">
+              Penugasan aktif
+            </h2>
+            <Link
+              to="/assignments"
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-500"
+            >
+              Lihat semua
+            </Link>
+          </div>
+
+          {latestAssignments.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-slate-500">
+              Belum ada penugasan aktif.
+            </p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {latestAssignments.map((assignment) => (
+                <li
+                  key={assignment.id}
+                  className="px-5 py-3.5"
+                >
+                  <p className="truncate text-sm font-medium">
+                    {assignment.title}
+                  </p>
+                  <p className="truncate text-xs text-slate-500">
+                    {assignment.employee} ·{" "}
+                    {assignment.department}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
     </div>

@@ -3,7 +3,6 @@ export type ParallelApiSpec = {
   label: string;
   url: string;
   delayMs: number;
-  sampleField: string;
 };
 
 export type ParallelApiResult = {
@@ -14,7 +13,6 @@ export type ParallelApiResult = {
   status: number;
   durationMs: number;
   count: number;
-  sample: string[];
   error?: string;
 };
 
@@ -22,6 +20,8 @@ export type ParallelDemoResult = {
   results: ParallelApiResult[];
   totalDurationMs: number;
   sequentialDurationMs: number;
+  configuredSequentialMs: number;
+  configuredParallelMs: number;
   savedMs: number;
   totalRecords: number;
   startedAt: string;
@@ -37,35 +37,30 @@ export const PARALLEL_API_SPECS: ParallelApiSpec[] = [
     label: "Posts",
     url: `${JSON_PLACEHOLDER}/posts?_limit=100`,
     delayMs: 1000,
-    sampleField: "title",
   },
   {
     key: "comments",
     label: "Comments",
     url: `${JSON_PLACEHOLDER}/comments?_limit=100`,
     delayMs: 1200,
-    sampleField: "name",
   },
   {
     key: "albums",
     label: "Albums",
     url: `${JSON_PLACEHOLDER}/albums?_limit=100`,
     delayMs: 800,
-    sampleField: "title",
   },
   {
     key: "photos",
     label: "Photos",
     url: `${JSON_PLACEHOLDER}/photos?_limit=100`,
     delayMs: 2000,
-    sampleField: "title",
   },
   {
     key: "todos",
     label: "Todos",
     url: `${JSON_PLACEHOLDER}/todos?_limit=100`,
     delayMs: 500,
-    sampleField: "title",
   },
 ];
 
@@ -101,8 +96,6 @@ export async function runParallelDemo(
   const startedAt = new Date();
   const started = performance.now();
 
-
-  // paraplel execution of API calls
   const results = await Promise.all(
     specs.map(async (spec): Promise<ParallelApiResult> => {
       const taskStarted = performance.now();
@@ -124,28 +117,9 @@ export async function runParallelDemo(
         }
 
         const payload: unknown = await response.json();
-        const items = Array.isArray(payload) ? payload : [];
-
-        const sample = items
-          .slice(0, 2)
-          .map((item) => {
-            if (
-              item &&
-              typeof item === "object" &&
-              spec.sampleField in item
-            ) {
-              const value = (
-                item as Record<string, unknown>
-              )[spec.sampleField];
-
-              return typeof value === "string"
-                ? value
-                : String(value ?? "");
-            }
-
-            return "";
-          })
-          .filter(Boolean);
+        const count = Array.isArray(payload)
+          ? payload.length
+          : 0;
 
         return {
           key: spec.key,
@@ -156,8 +130,7 @@ export async function runParallelDemo(
           durationMs: Math.round(
             performance.now() - taskStarted,
           ),
-          count: items.length,
-          sample,
+          count,
         };
       } catch (error) {
         return {
@@ -170,7 +143,6 @@ export async function runParallelDemo(
             performance.now() - taskStarted,
           ),
           count: 0,
-          sample: [],
           error:
             error instanceof Error
               ? error.message
@@ -189,13 +161,25 @@ export async function runParallelDemo(
     0,
   );
 
+  const configuredSequentialMs = specs.reduce(
+    (sum, spec) => sum + spec.delayMs,
+    0,
+  );
+
+  const configuredParallelMs = specs.reduce(
+    (max, spec) => Math.max(max, spec.delayMs),
+    0,
+  );
+
   return {
     results,
     totalDurationMs,
     sequentialDurationMs,
+    configuredSequentialMs,
+    configuredParallelMs,
     savedMs: Math.max(
       0,
-      sequentialDurationMs - totalDurationMs,
+      configuredSequentialMs - totalDurationMs,
     ),
     totalRecords: results.reduce(
       (sum, result) => sum + result.count,

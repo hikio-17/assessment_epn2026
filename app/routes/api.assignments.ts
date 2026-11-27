@@ -76,7 +76,7 @@ export async function action({
 
     return apiSuccess(
       assignment,
-      "Assignment berhasil dibuat.",
+      "Penugasan berhasil dibuat.",
       201,
     );
   } catch (error) {
