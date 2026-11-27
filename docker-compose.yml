@@ -1,0 +1,23 @@
+name: peopleops-assessment
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: peopleops-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: assessment
+      POSTGRES_PASSWORD: assessment
+      POSTGRES_DB: assessment
+    ports:
+      - "5432:5432"
+    volumes:
+      - peopleops_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assessment -d assessment"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  peopleops_pgdata:

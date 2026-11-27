@@ -1,0 +1,16 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+/node_modules/
+/uploads/
+/coverage/
+/tests/.tmp/
+*.log
+
+# Kita memakai Yarn
+/package-lock.json
+
+# React Router
+/.react-router/
+/build/
