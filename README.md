@@ -41,7 +41,14 @@ yarn dev
 
 `yarn db:setup` menyalakan PostgreSQL lewat Docker Compose lalu menjalankan seed.
 
-Aplikasi tersedia di `http://localhost:5173`.
+Aplikasi tersedia di `http://localhost:4000`.
+
+Untuk memakai port lain:
+
+```bash
+PORT=5000 yarn dev
+PORT=5000 yarn start
+```
 
 Untuk menjalankan hasil build:
 
